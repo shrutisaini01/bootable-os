@@ -1,28 +1,23 @@
 #include <stdint.h>
 #include <string.h>
 
-// Define VGA text mode buffer
 volatile uint16_t* const VGA_BUFFER = (uint16_t*)0xB8000;
 const int VGA_COLS = 80;
 const int VGA_ROWS = 25;
 
-// Current position in the buffer
 int term_col = 0;
 int term_row = 0;
-uint8_t term_color = 0x0F; // White on black
+uint8_t term_color = 0x0F;
 
-// Command buffer
 char cmd_buffer[256];
 int cmd_pos = 0;
 
-// Function declarations
 void clear_screen();
 void print_char(char c);
 void print_string(const char* str);
 void process_command();
 void new_line();
 
-// String comparison functions
 int strcmp(const char* s1, const char* s2) {
     while (*s1 && (*s1 == *s2)) {
         s1++;
@@ -41,7 +36,6 @@ int strncmp(const char* s1, const char* s2, size_t n) {
     return *(unsigned char*)s1 - *(unsigned char*)s2;
 }
 
-// I/O port functions
 static inline uint8_t inb(uint16_t port) {
     uint8_t ret;
     asm volatile("inb %1, %0" : "=a"(ret) : "Nd"(port));
@@ -58,21 +52,19 @@ extern "C" void kernel_main() {
     print_string("Available commands: clear, help, echo, reboot, halt\n");
     print_string("> ");
 
-    // Main loop
     while(true) {
-        // Read keyboard input (using BIOS interrupt)
         asm volatile(
             "int $0x16"
             : "=a"(*(uint16_t*)0)
         );
         char c = *(char*)0;
 
-        if (c == '\r') { // Enter key
+        if (c == '\r') {
             new_line();
             process_command();
             cmd_pos = 0;
             print_string("> ");
-        } else if (c == '\b') { // Backspace
+        } else if (c == '\b') {
             if (cmd_pos > 0) {
                 cmd_pos--;
                 term_col--;
@@ -141,7 +133,6 @@ void process_command() {
         print_char('\n');
     }
     else if (strcmp(cmd_buffer, "reboot") == 0) {
-        // Reboot using keyboard controller
         uint8_t good = 0x02;
         while (good & 0x02)
             good = inb(0x64);
@@ -155,4 +146,4 @@ void process_command() {
     else if (cmd_pos > 0) {
         print_string("Unknown command. Type 'help' for available commands.\n");
     }
-} 
+}
